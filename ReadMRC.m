@@ -30,6 +30,7 @@ f=fopen(filename,'r','ieee-le');
 if f<0
     error(['in ReadMRC the file could not be opened: ' filename])
 end;
+
 % Get the first 10 values, which are integers:
 % nc nr ns mode ncstart nrstart nsstart nx ny nz
 a=fread(f,10,'*int32');
@@ -46,55 +47,84 @@ end;
 
 mode=a(4);
 
-% Get the next 12 (entries 11 to 23), which are floats.
-% the first three are the cell dimensions.
-% xlength ylength zlength alpha beta gamma mapc mapr maps
-% amin amax amean.
-[b,cnt]=fread(f,12,'float32');
+% Get the next 6 (entries 11 to 17), which are floats.
+% the first three are the cell dimensions, the second three are
+% angles.
+[b,cnt]=fread(f,6,'float32');
 if test
    b
 end;
-
-% b(4,5,6) angles
-mi=b(10); % minimum value
-ma=b(11); % maximum value
-av=b(12);  % average value
-
+s.xlen = b(1);
+s.ylen = b(2);
+s.zlen = b(3);
 s.rez=double(b(1)); % cell size x, in A.
+s.alpha = b(4);
+s.beta = b(5);
+s.gamma = b(6);
 
-% get the next 30, which brings us up to entry no. 52.
-[c,cnt]=fread(f,30,'*int32');
-if test, c(1:3), end;
-% c(2) is the extended header in bytes.
+% get next 3 ints ("These need to be set to 1, 2, and 3 for pixel
+% spacing to be interpreted correctly")
+aux1 = fread(f, 3, 'int32');
+s.mapc = aux1(1);
+s.mapr = aux1(2);
+s.maps = aux1(3);
+
+% next 3 floats: min, max and mean pixel value
+aux2 = fread(f, 3, 'float32');
+mi=aux2(1); % minimum value
+ma=aux2(2); % maximum value
+av=aux2(3);  % average value
+
+% get 2 ints,
+aux3 = fread(f, 2, 'int32');
+s.ispg = aux3(1); % space group number, ignored by IMOD
+s.next = aux3(2); % number of bytes in extended header
+
+% get 1 shortint: "used to be an ID number, is 0 as of IMOD 4.2.23"
+s.creatid = fread(f, 1, 'int16');
+
+% get the next 30 bytes
+% extra data  (not used by IMOD, first two bytes should be 0)
+[c,cnt]=fread(f,30,'char');
 
 % the next two are supposed to be character strings.
-[d,cnt]=fread(f,8,'*char');
-d=d';
-s.chars=d;
-if test
-    d
-end;
+[d,cnt]=fread(f,2,'int16');
+s.nint = d(1);
+s.nreal = d(2);
 
-% Two more ints...
-[e,cnt]=fread(f,2,'*int32');
-if test, e, end;
+% get the next 20 bytes
+% extra data  (not used by IMOD)
+[aux4,cnt]=fread(f,20,'char');
 
-% up to 10 strings....
-ns=min(e(2),10);
+% get 2 ints,
+aux5 = fread(f, 2, 'int32');
+s.imodStamp = aux5(1);
+s.imodFlags = aux5(2);
+
+% here we consider the new-style header (IMOD 2.6.20 and above)
+aux6 = fread(f, 3, 'float32');
+aux7 = fread(f, 2, 'char');
+aux8 = fread(f, 1, 'float32');
+
+% 10 strings of 80 characters each
 for i=1:10
 	[g,cnt]=fread(f,80,'char');
 	str(i,:)=char(g)';
 end;
+
 % disp('header:'); disp(' ');
 % disp(str(1:ns,:));
 % disp(' ');
-s.header=str(1:ns,:);
+s.header=str;
 
 % Get ready to read the data.
 s.nx=double(a(1));
 s.ny=double(a(2));
 s.nz=double(a(3));
-
+% Grid size in X, Y, and Z
+s.mx=a(8);
+s.my=a(9);
+s.mz=a(10);
 switch mode
     case 0
         string='*uint8';
@@ -113,8 +143,8 @@ switch mode
         pixbytes=0;
 end;
 
-if(c(2)>0)
-    [ex_header,cnt]=fread(f,c(2),'char');
+if(s.next>0)
+    [ex_header,cnt]=fread(f,s.next,'char');
     disp(['Read extra header of ',num2str(c(2)),' bytes!'])
 %    disp((ex_header'));
 end
@@ -131,10 +161,8 @@ if test
     string
     ndata
 end;
-
 [map,cnt]=fread(f,ndata,string);
 fclose(f);
-
 if cnt ~= ndata
     error('ReadMRC: not enough data in file.');
 end;
