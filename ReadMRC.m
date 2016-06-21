@@ -1,19 +1,27 @@
 function [map, header, minVal, maxVal, averageVal]=ReadMRC(filename,startSlice, numSlices,test)
-% function map=ReadMRC(filename);  --all defaults.   Or, with every
-% parameter,
-% function [map, header, minVal, maxVal, averageVal]=ReadMRC(filename,startSlice, numSlices,test)
+% map = ReadMRC(filename);
+%          ReadMRC(filename) reads the whole MRC-file and returns
+%          voxels.
 %
-% Read a 3D map from a little-endian .mrc file
-% and return a structure containing various parameters read from the file.
-% This function reads 2d and 3d real maps in byte, int16 and float32 modes.
-% Added interpretation of the extended header (length = c(2) which is important with imod and
-% serialEM at Brandeis.  lw 15 Aug 07
+% [map, header, minVal, maxVal, averageVal] = ReadMRC(filename,startSlice, numSlices,test)
+%          ReadMRC(filename,startSlice, numSlices,test) read some
+%          slices of the MRC-file, returns the voxels and meta data
+%          as described by [The MRC file format used by
+%          IMOD.](http://bio3d.colorado.edu/imod/doc/mrc_format.txt).
+%
+% 
+% This function reads 2d and 3d real maps in byte, int16 and
+% float32 modes.
+%
+% Added interpretation of the extended header (length = c(2) which is
+% important with imod and serialEM at Brandeis.  lw 15 Aug 07
 % Added error tests.  fs 2 Sep 07
 % Added the ability to read selected slices, and read big-endian files
 % fs 17 Sep 09
 % Changed the a array so that the returned s values are doubles.  5 Nov 09
 % Added data mode 6 (unsigned int16) fs 20 Jan 10
 % Changed s fields to doubles fs 20 Feb 10
+% Changed the whole header reading. nk. Jun 2016
 
 if nargin<2
     startSlice=1;
