@@ -1,4 +1,4 @@
-function [map,s,mi,ma,av]=ReadMRC(filename,startSlice, numSlices,test)
+function [map, s, mi, ma, av]=ReadMRC(filename,startSlice, numSlices,test)
 % function map=ReadMRC(filename);  --all defaults.   Or, with every
 % parameter,
 % function [map,s,mi,ma,av]=ReadMRC(filename,startSlice, numSlices,test)
