@@ -1,7 +1,7 @@
-function [map, s, mi, ma, av]=ReadMRC(filename,startSlice, numSlices,test)
+function [map, header, minVal, maxVal, averageVal]=ReadMRC(filename,startSlice, numSlices,test)
 % function map=ReadMRC(filename);  --all defaults.   Or, with every
 % parameter,
-% function [map,s,mi,ma,av]=ReadMRC(filename,startSlice, numSlices,test)
+% function [map, header, minVal, maxVal, averageVal]=ReadMRC(filename,startSlice, numSlices,test)
 %
 % Read a 3D map from a little-endian .mrc file
 % and return a structure containing various parameters read from the file.
@@ -54,34 +54,34 @@ mode = a(4);
 if test
    b
 end;
-s.xlen = b(1);
-s.ylen = b(2);
-s.zlen = b(3);
-s.rez=double(b(1)); % cell size x, in A.
-s.alpha = b(4);
-s.beta = b(5);
-s.gamma = b(6);
+header.xlen = b(1);
+header.ylen = b(2);
+header.zlen = b(3);
+header.rez=double(b(1)); % cell size x, in A.
+header.alpha = b(4);
+header.beta = b(5);
+header.gamma = b(6);
 
 % get next 3 ints ("These need to be set to 1, 2, and 3 for pixel
 % spacing to be interpreted correctly")
 aux1 = fread(f, 3, 'int32');
-s.mapc = aux1(1);
-s.mapr = aux1(2);
-s.maps = aux1(3);
+header.mapc = aux1(1);
+header.mapr = aux1(2);
+header.maps = aux1(3);
 
 % next 3 floats: min, max and mean pixel value
 aux2 = fread(f, 3, 'float32');
-mi = aux2(1); % minimum value
-ma = aux2(2); % maximum value
-av = aux2(3);  % average value
+minVal = aux2(1); % minimum value
+maxVal = aux2(2); % maximum value
+averageVal = aux2(3);  % average value
 
 % get 2 ints,
 aux3 = fread(f, 2, 'int32');
-s.ispg = aux3(1); % space group number, ignored by IMOD
-s.next = aux3(2); % number of bytes in extended header
+header.ispg = aux3(1); % space group number, ignored by IMOD
+header.next = aux3(2); % number of bytes in extended header
 
 % get 1 shortint: "used to be an ID number, is 0 as of IMOD 4.2.23"
-s.creatid = fread(f, 1, 'int16');
+header.creatid = fread(f, 1, 'int16');
 
 % get the next 30 bytes
 % extra data  (not used by IMOD, first two bytes should be 0)
@@ -89,8 +89,8 @@ s.creatid = fread(f, 1, 'int16');
 
 % the next two are supposed to be character strings.
 [d,cnt] = fread(f,2,'int16');
-s.nint = d(1);
-s.nreal = d(2);
+header.nint = d(1);
+header.nreal = d(2);
 
 % get the next 20 bytes
 % extra data  (not used by IMOD)
@@ -98,8 +98,8 @@ s.nreal = d(2);
 
 % get 2 ints,
 aux5 = fread(f, 2, 'int32');
-s.imodStamp = aux5(1);
-s.imodFlags = aux5(2);
+header.imodStamp = aux5(1);
+header.imodFlags = aux5(2);
 
 % here we consider the new-style header (IMOD 2.6.20 and above)
 aux6 = fread(f, 3, 'float32');
@@ -115,16 +115,16 @@ end;
 % disp('header:'); disp(' ');
 % disp(str(1:ns,:));
 % disp(' ');
-s.header = str;
+header.header = str;
 
 % Get ready to read the data.
-s.nx = double(a(1));
-s.ny = double(a(2));
-s.nz = double(a(3));
+header.nx = double(a(1));
+header.ny = double(a(2));
+header.nz = double(a(3));
 % Grid size in X, Y, and Z
-s.mx = a(8);
-s.my = a(9);
-s.mz = a(10);
+header.mx = a(8);
+header.my = a(9);
+header.mz = a(10);
 switch mode
     case 0
         string = '*uint8';
@@ -143,20 +143,20 @@ switch mode
         pixbytes = 0;
 end;
 
-if(s.next>0)
-    [ex_header,cnt] = fread(f,s.next,'char');
+if(header.next>0)
+    [ex_header,cnt] = fread(f,header.next,'char');
     disp(['Read extra header of ',num2str(c(2)),' bytes!'])
 %    disp((ex_header'));
 end
 
 skipbytes = 0;
-nz = s.nz;
+nz = header.nz;
 if startSlice>1
-    skipbytes = (startSlice-1) * s.nx * s.ny * pixbytes;
+    skipbytes = (startSlice-1) * header.nx * header.ny * pixbytes;
     fseek(f,skipbytes,'cof');
-    nz = min(s.nz-(startSlice-1),numSlices);
+    nz = min(header.nz-(startSlice-1),numSlices);
 end;
-ndata = s.nx * s.ny * nz;
+ndata = header.nx * header.ny * nz;
 if test
     string
     ndata
@@ -167,4 +167,4 @@ if cnt ~= ndata
     error('ReadMRC: not enough data in file.');
 end;
 
-map = reshape(map, s.nx, s.ny, nz);
+map = reshape(map, header.nx, header.ny, nz);
