@@ -12,9 +12,14 @@ by a little-endian machine.  However, some functions might still work
 with big-endian machines such as PowerPC, as they were originally
 written on a Mac computer.
 
-Fred Sigworth, Liguo Wang
-Yale University
+The original code was developed by Fred Sigworth and Liguo Wang at
+Yale University and provided through [mathworks](http://www.mathworks.com/matlabcentral/fileexchange/27021-imagic--mrc-and-dm3-file-i-o).
 
+Problems when reading MRC files prompted me to do some changes to ReadMRC(). 
+
+Niko Komin
+LCSB/University of Luxembourg
+2016
 
 **ReadImagic**
 
